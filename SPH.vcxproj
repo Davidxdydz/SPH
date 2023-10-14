@@ -141,9 +141,13 @@
   <ItemGroup>
     <ClCompile Include="loadShader.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="RenderObject.cpp" />
+    <ClCompile Include="shapes.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="loadShader.h" />
+    <ClInclude Include="RenderObject.h" />
+    <ClInclude Include="shapes.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

@@ -63,7 +63,7 @@ GLuint LoadShaders(const char *shader_dir)
     {
         std::vector<char> VertexShaderErrorMessage(InfoLogLength + 1);
         glGetShaderInfoLog(VertexShaderID, InfoLogLength, NULL, &VertexShaderErrorMessage[0]);
-        std::cout << VertexShaderErrorMessage[0] << std::endl;
+        std::cout << &VertexShaderErrorMessage[0] << std::endl;
     }
 
     // Compile Fragment Shader
@@ -79,7 +79,7 @@ GLuint LoadShaders(const char *shader_dir)
     {
         std::vector<char> FragmentShaderErrorMessage(InfoLogLength + 1);
         glGetShaderInfoLog(FragmentShaderID, InfoLogLength, NULL, &FragmentShaderErrorMessage[0]);
-        std::cout << FragmentShaderErrorMessage[0] << std::endl;
+        std::cout << &FragmentShaderErrorMessage[0] << std::endl;
     }
 
     // Link the program
@@ -96,7 +96,7 @@ GLuint LoadShaders(const char *shader_dir)
     {
         std::vector<char> ProgramErrorMessage(InfoLogLength + 1);
         glGetProgramInfoLog(ProgramID, InfoLogLength, NULL, &ProgramErrorMessage[0]);
-        std::cout << ProgramErrorMessage[0] << std::endl;
+        std::cout << &ProgramErrorMessage[0] << std::endl;
     }
 
     glDetachShader(ProgramID, VertexShaderID);

@@ -9,11 +9,9 @@
 #include <glm/glm.hpp>
 using namespace glm;
 
-#include "loadShader.h"
-
-#include "shapes.h"
-
 #include "RenderObject.h"
+#include "loadShader.h"
+#include "shapes.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -58,16 +56,18 @@ int main()
     glGenBuffers(1, &cubeVertexBuffer);
     glBindBuffer(GL_ARRAY_BUFFER, cubeVertexBuffer);
     glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), cubeVertices, GL_STATIC_DRAW);
-    VertexAttribute cubeVertexLocations = VertexAttribute(cubeVertexBuffer, 0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
+    BufferAttribute cubeVertexLocations = BufferAttribute(cubeVertexBuffer, 0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
 
     GLuint triangleVertexBuffer;
     glGenBuffers(1, &triangleVertexBuffer);
     glBindBuffer(GL_ARRAY_BUFFER, triangleVertexBuffer);
     glBufferData(GL_ARRAY_BUFFER, sizeof(triangleVertices), triangleVertices, GL_STATIC_DRAW);
-    VertexAttribute triangleVertexLocations = VertexAttribute(triangleVertexBuffer, 0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
+    BufferAttribute triangleVertexLocations = BufferAttribute(triangleVertexBuffer, 0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
 
-    GLuint programID = LoadShaders("shaders/localPosition");
-    GLuint MatrixID = glGetUniformLocation(programID, "MVP");
+    GLuint simpleShaderID = LoadShaders("shaders/localPosition");
+    GLuint instancingShaderID = LoadShaders("shaders/instancing");
+
+    GLuint MatrixID = glGetUniformLocation(simpleShaderID, "MVP");
 
     float dt = 0.0f;
     float t = 0.0f;
@@ -76,31 +76,27 @@ int main()
     double fpsLastTime = glfwGetTime();
     int frameCount = 0;
 
-    IndexedMesh sphere = make_icosphere(1);
+    // create a list of two transforms to draw
+    std::vector<Transform> transforms;
+    for (int i = 0; i < 100; i++)
+    {
+        transforms.push_back(Transform(vec3((float)i / 20.0f, 0, 0), vec3(0, 0, 0), vec3(0.01f)));
+    }
 
-    GLuint sphereVertexBuffer;
-    glGenBuffers(1, &sphereVertexBuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, sphereVertexBuffer);
-    glBufferData(GL_ARRAY_BUFFER, sphere.first.size() * sizeof(vec3), &sphere.first[0], GL_STATIC_DRAW);
-    VertexAttribute sphereVertexLocations = VertexAttribute(sphereVertexBuffer, 0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
+    SpheresRenderer spheresRenderer(instancingShaderID, {}, {}, transforms, 1);
 
-    GLuint sphereTriangleBuffer;
-    glGenBuffers(1, &sphereTriangleBuffer);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, sphereTriangleBuffer);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sphere.second.size() * sizeof(Triangle), &sphere.second[0], GL_STATIC_DRAW);
-
-    // glEnable(GL_CULL_FACE);
+    glEnable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
 
     RenderObject cube = RenderObject(
-        programID,
+        simpleShaderID,
         sizeof(cubeVertices) / 3,
         {cubeVertexLocations},
         MatrixID);
 
     RenderObject cube2 = RenderObject(
-        programID,
+        simpleShaderID,
         sizeof(cubeVertices) / 3,
         {cubeVertexLocations},
         MatrixID,
@@ -108,42 +104,32 @@ int main()
         vec3(0, 0, 0),
         vec3(0.5, 1, 0.5));
 
-    RenderObject triangle = RenderObject(
-        programID,
-        sizeof(triangleVertices) / 3,
-        {triangleVertexLocations},
-        MatrixID,
-        vec3(-1, 0, 0),
-        vec3(0, 0, 0),
-        vec3(1, 1, 1));
-
     float degreesPerSecond = 100;
     do
     {
         glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        Camera::mainCamera.position.x = 5 * sin(radians(t * degreesPerSecond));
-        Camera::mainCamera.position.z = 5 * cos(radians(t * degreesPerSecond));
+        // Camera::mainCamera.position.x = 5 * sin(radians(t * degreesPerSecond));
+        // Camera::mainCamera.position.z = 5 * cos(radians(t * degreesPerSecond));
 
-        cube.rotation.x += dt * degreesPerSecond;
+        cube.transform.rotation.x += dt * degreesPerSecond;
         cube.draw();
         float scale = (sin(radians(t * degreesPerSecond * 4)) + 1) / 2; // 0 to 1
-        scale = scale * 0.5 + 0.5;                                      // 0.5 to 1
-        cube.scale = vec3(scale);
+        scale = scale * 0.5f + 0.5f;                                    // 0.5 to 1
+        cube.transform.scale = vec3(scale);
 
-        cube2.rotation.y -= dt * degreesPerSecond;
+        cube2.transform.rotation.y -= dt * degreesPerSecond;
         cube2.draw();
 
-        triangle.rotation.z += dt * degreesPerSecond;
-        triangle.draw();
-
-        // draw the sphere
-        glBindBuffer(GL_ARRAY_BUFFER, sphereVertexBuffer);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, sphereTriangleBuffer);
-        glEnableVertexAttribArray(0);
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
-        glDrawElements(GL_TRIANGLES, sphere.second.size() * 3, GL_UNSIGNED_INT, (void *)0);
+        for (int i = 0; i < transforms.size(); i++)
+        {
+            float arg = radians(t * degreesPerSecond);
+            float phase = radians((float)i / 100 * 720);
+            transforms[i].position.y = sin(arg + phase) * 0.5f;
+            transforms[i].scale = vec3(sin(arg + phase + 180) + 1) * 0.02f / 2.0f + 0.01f;
+        }
+        spheresRenderer.draw();
 
         // Swap buffers
         glfwSwapBuffers(window);
