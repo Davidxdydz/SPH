@@ -19,8 +19,6 @@ using namespace glm;
 
 int main()
 {
-    int width = Camera::mainCamera.width;
-    int height = Camera::mainCamera.height;
     float fpsAverageTime = 1.0f;
     glewExperimental = true; // Needed for core profile
     if (!glfwInit())
@@ -35,7 +33,7 @@ int main()
 
     // Open a window and create its OpenGL context
     GLFWwindow *window; // (In the accompanying source code, this variable is global for simplicity)
-    window = glfwCreateWindow(width, height, "Test", NULL, NULL);
+    window = glfwCreateWindow(Camera::mainCamera.width, Camera::mainCamera.height, "Test", NULL, NULL);
     if (window == NULL)
     {
         fprintf(stderr, "Failed to open GLFW window. If you have an Intel GPU, they are not 3.3 compatible. Try the 2.1 version of the tutorials.\n");
@@ -67,7 +65,7 @@ int main()
     glBufferData(GL_ARRAY_BUFFER, sizeof(triangleVertices), triangleVertices, GL_STATIC_DRAW);
     VertexAttribute triangleVertexLocations = VertexAttribute(triangleVertexBuffer, 0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
 
-    GLuint programID = LoadShaders("VertexShader.glsl", "FragmentShader.glsl");
+    GLuint programID = LoadShaders("shaders/localPosition");
     GLuint MatrixID = glGetUniformLocation(programID, "MVP");
 
     float dt = 0.0f;
