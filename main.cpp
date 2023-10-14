@@ -19,24 +19,20 @@ using namespace glm;
 
 int main()
 {
-    float fpsAverageTime = 1.0f;
-    glewExperimental = true; // Needed for core profile
     if (!glfwInit())
     {
-        fprintf(stderr, "Failed to initialize GLFW\n");
+        std::cerr << "Failed to initialize GLFW" << std::endl;
         return -1;
     }
     glfwWindowHint(GLFW_SAMPLES, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    // Open a window and create its OpenGL context
-    GLFWwindow *window; // (In the accompanying source code, this variable is global for simplicity)
+    GLFWwindow *window;
     window = glfwCreateWindow(Camera::mainCamera.width, Camera::mainCamera.height, "Test", NULL, NULL);
     if (window == NULL)
     {
-        fprintf(stderr, "Failed to open GLFW window. If you have an Intel GPU, they are not 3.3 compatible. Try the 2.1 version of the tutorials.\n");
+        std::cerr << "Failed to open GLFW window." << std::endl;
         glfwTerminate();
         return -1;
     }
@@ -44,15 +40,20 @@ int main()
     glewExperimental = true;        // Needed in core profile
     if (glewInit() != GLEW_OK)
     {
-        fprintf(stderr, "Failed to initialize GLEW\n");
+        std::cerr << "Failed to initialize GLEW" << std::endl;
         return -1;
     }
+
+    // disable vsync
     glfwSwapInterval(0);
+
     glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
+
     GLuint VertexArrayID;
     glGenVertexArrays(1, &VertexArrayID);
     glBindVertexArray(VertexArrayID);
 
+    float fpsAverageTime = 1.0f;
     GLuint cubeVertexBuffer;
     glGenBuffers(1, &cubeVertexBuffer);
     glBindBuffer(GL_ARRAY_BUFFER, cubeVertexBuffer);
