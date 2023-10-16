@@ -10,7 +10,7 @@ struct Transform
     vec3 position;
     vec3 rotation; // euler angles in degrees
     vec3 scale;
-    Transform(vec3 position = vec3(0), vec3 rotation = vec3(0), vec3 scale = vec3(1));
+    Transform(vec3 position = vec3(0), vec3 rotation = vec3(0), vec3 scale = vec3(1)) : position(position), rotation(rotation), scale(scale){};
     mat4 getMatrix();
 };
 

@@ -6,13 +6,6 @@
 
 #include "shapes.h"
 
-Transform::Transform(vec3 position, vec3 rotation, vec3 scale)
-{
-    this->position = position;
-    this->rotation = rotation;
-    this->scale = scale;
-}
-
 mat4 Transform::getMatrix()
 {
     mat4 model = translate(mat4(1.0f), position);
