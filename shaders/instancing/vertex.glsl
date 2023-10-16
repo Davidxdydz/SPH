@@ -1,12 +1,13 @@
 #version 460 core
 
-layout(location=0)in vec3 vertexPosition_modelspace;
-layout(location=1) in vec3 position;
-layout(location=2) in vec3 rotation;
-layout(location=3) in vec3 scale;
+in vec3 vertex;
+in vec3 position;
+in vec3 rotation;
+in vec3 scale;
+in vec3 color;
 
 uniform mat4 vp;
-out vec3 localPos;
+out vec3 baseColor;
 out vec3 p;
 out vec3 r;
 out vec3 s;
@@ -43,8 +44,8 @@ void main(){
     scaleMat[2][2] = scale.z;
     scaleMat[3][3] = 1.0;
     model = model*scaleMat;
-    gl_Position=vp*model*vec4(vertexPosition_modelspace,1);
-    localPos=vertexPosition_modelspace;
+    gl_Position=vp*model*vec4(vertex,1);
+    baseColor = color;
     p = position;
     r = rotation;
     s = scale;

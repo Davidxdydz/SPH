@@ -12,6 +12,7 @@ using namespace glm;
 #include "RenderObject.h"
 #include "loadShader.h"
 #include "shapes.h"
+#include "sph.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -52,17 +53,6 @@ int main()
     glBindVertexArray(VertexArrayID);
 
     float fpsAverageTime = 1.0f;
-    GLuint cubeVertexBuffer;
-    glGenBuffers(1, &cubeVertexBuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, cubeVertexBuffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(cubeVertices), cubeVertices, GL_STATIC_DRAW);
-    BufferAttribute cubeVertexLocations = BufferAttribute(cubeVertexBuffer, 0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
-
-    GLuint triangleVertexBuffer;
-    glGenBuffers(1, &triangleVertexBuffer);
-    glBindBuffer(GL_ARRAY_BUFFER, triangleVertexBuffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(triangleVertices), triangleVertices, GL_STATIC_DRAW);
-    BufferAttribute triangleVertexLocations = BufferAttribute(triangleVertexBuffer, 0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
 
     GLuint simpleShaderID = LoadShaders("shaders/localPosition");
     GLuint instancingShaderID = LoadShaders("shaders/instancing");
@@ -76,33 +66,46 @@ int main()
     double fpsLastTime = glfwGetTime();
     int frameCount = 0;
 
-    // create a list of two transforms to draw
+    int nx = 20;
+    int ny = 20;
+    int nz = 1;
+    int n = nx * ny * nz;
     std::vector<Transform> transforms;
-    for (int i = 0; i < 100; i++)
+    std::vector<vec3> colors;
+    std::vector<vec3> vs;
+    std::vector<float> densities = std::vector<float>(transforms.size(), 0);
+    float fixedDt = 0.005f;
+    float simulatedVolume = 1.0f;
+    float gravity = 1.0f;
+    float initialDensity = 200; // nx* ny* nz / simulatedVolume;
+    float volume = simulatedVolume / nx / ny / nz;
+    float h = 1.0f / pow(initialDensity, 1 / 2) / 2;
+    float displayRaius = 0.02f;
+    float effectiveRadius = pow(volume * 3 / 4 / 3.1415926f, 1.0f / 3);
+    float targetDensity = initialDensity/3;
+    float stiffness = 15.0f;
+
+    for (int x = 0; x < nx; x++)
     {
-        transforms.push_back(Transform(vec3((float)i / 20.0f, 0, 0), vec3(0, 0, 0), vec3(0.01f)));
+        for (int y = 0; y < ny; y++)
+        {
+            for (int z = 0; z < nz; z++)
+            {
+                float x0 = (float)x / nx;
+                float y0 = (float)y / ny;
+                float z0 = (float)z / nz;
+                transforms.push_back(Transform(vec3(x0, y0, z0) - vec3(0.5), vec3(0), vec3(displayRaius)));
+                vs.push_back(vec3(0));
+                colors.push_back(vec3(x0, y0, z0));
+            }
+        }
     }
 
-    SpheresRenderer spheresRenderer(instancingShaderID, {}, {}, transforms, 1);
+    SpheresRenderer spheresRenderer(instancingShaderID, transforms, colors, 2);
 
     glEnable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
-
-    RenderObject cube = RenderObject(
-        simpleShaderID,
-        sizeof(cubeVertices) / 3,
-        {cubeVertexLocations},
-        MatrixID);
-
-    RenderObject cube2 = RenderObject(
-        simpleShaderID,
-        sizeof(cubeVertices) / 3,
-        {cubeVertexLocations},
-        MatrixID,
-        vec3(1, 0, 0),
-        vec3(0, 0, 0),
-        vec3(0.5, 1, 0.5));
 
     float degreesPerSecond = 100;
     do
@@ -110,24 +113,13 @@ int main()
         glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        // Camera::mainCamera.position.x = 5 * sin(radians(t * degreesPerSecond));
-        // Camera::mainCamera.position.z = 5 * cos(radians(t * degreesPerSecond));
+        sphStep(densities, transforms, vs, fixedDt, h, stiffness, targetDensity, gravity, 1, volume);
+        applyBoundaries(transforms, vs, 0.1, gravity);
 
-        cube.transform.rotation.x += dt * degreesPerSecond;
-        cube.draw();
-        float scale = (sin(radians(t * degreesPerSecond * 4)) + 1) / 2; // 0 to 1
-        scale = scale * 0.5f + 0.5f;                                    // 0.5 to 1
-        cube.transform.scale = vec3(scale);
-
-        cube2.transform.rotation.y -= dt * degreesPerSecond;
-        cube2.draw();
-
-        for (int i = 0; i < transforms.size(); i++)
+        for (int i = 0; i < densities.size(); i++)
         {
-            float arg = radians(t * degreesPerSecond);
-            float phase = radians((float)i / 100 * 720);
-            transforms[i].position.y = sin(arg + phase) * 0.5f;
-            transforms[i].scale = vec3(sin(arg + phase + 180) + 1) * 0.02f / 2.0f + 0.01f;
+            float normalized = densities[i] / targetDensity;
+            colors[i] = vec3(normalized, 1 - normalized, 0);
         }
         spheresRenderer.draw();
 

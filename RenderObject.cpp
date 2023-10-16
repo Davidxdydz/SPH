@@ -38,20 +38,36 @@ mat4 Camera::getProjectionMatrix()
     return perspective(radians(fov), (float)width / (float)height, near, far);
 }
 
-BufferAttribute::BufferAttribute(GLuint bufferID, GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const GLvoid *pointer)
+void BufferAttribute::set() const
 {
-    this->bufferID = bufferID;
-    this->index = index;
-    this->size = size;
-    this->type = type;
-    this->normalized = normalized;
-    this->stride = stride;
-    this->pointer = pointer;
+    glEnableVertexAttribArray(index);
+    glBindBuffer(GL_ARRAY_BUFFER, bufferID);
+    glVertexAttribPointer(
+        index,
+        size,
+        type,
+        normalized,
+        stride,
+        pointer);
+    glVertexAttribDivisor(index, divisor);
 }
 
-SpheresRenderer::SpheresRenderer(GLuint shaderID, std::vector<GLuint> bufferIds, std::vector<BufferAttribute> bufferAttributes, std::vector<Transform> &transforms, int subdivisions) : transforms(transforms), shaderID(shaderID), bufferAttributes(bufferAttributes), bufferIDs(bufferIds)
+void VertexAttribute::set() const
 {
-    IndexedMesh sphere = make_icosphere(1);
+    glEnableVertexAttribArray(index);
+    glVertexAttribPointer(
+        index,
+        size,
+        type,
+        normalized,
+        stride,
+        pointer);
+}
+
+SpheresRenderer::SpheresRenderer(GLuint shaderID, std::vector<Transform> &transforms, std::vector<vec3> &colors, int subdivisions)
+    : transforms(transforms), shaderID(shaderID), colors(colors)
+{
+    IndexedMesh sphere = make_icosphere(subdivisions);
     vertexCount = sphere.first.size();
     triangleCount = sphere.second.size();
     transformCount = transforms.size();
@@ -63,72 +79,49 @@ SpheresRenderer::SpheresRenderer(GLuint shaderID, std::vector<GLuint> bufferIds,
     glGenBuffers(1, &triangleBuffer);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, triangleBuffer);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, triangleCount * sizeof(Triangle), &sphere.second[0], GL_STATIC_DRAW);
-    vpMatrixID = glGetUniformLocation(shaderID, "vp");
 
     glGenBuffers(1, &transformsBuffer);
     glBindBuffer(GL_ARRAY_BUFFER, transformsBuffer);
-    glBufferData(GL_ARRAY_BUFFER, transformCount * sizeof(Transform), &transforms[0], GL_DYNAMIC_DRAW);
-    positionsAttribute = BufferAttribute(transformsBuffer, 1, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void *)0);
-    rotationsAttribute = BufferAttribute(transformsBuffer, 2, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void *)(3 * sizeof(float)));
-    scalesAttribute = BufferAttribute(transformsBuffer, 3, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void *)(6 * sizeof(float)));
+
+    glGenBuffers(1, &colorsBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, colorsBuffer);
+
+    vpMatrixID = glGetUniformLocation(shaderID, "vp");
+    positionsAttribute = BufferAttribute(transformsBuffer, glGetAttribLocation(shaderID, "position"), 3, GL_FLOAT, GL_FALSE, sizeof(Transform), (void *)0, 1);
+    rotationsAttribute = BufferAttribute(transformsBuffer, glGetAttribLocation(shaderID, "rotation"), 3, GL_FLOAT, GL_FALSE, sizeof(Transform), (void *)(3 * sizeof(float)), 1);
+    scalesAttribute = BufferAttribute(transformsBuffer, glGetAttribLocation(shaderID, "scale"), 3, GL_FLOAT, GL_FALSE, sizeof(Transform), (void *)(6 * sizeof(float)), 1);
+    colorsAttribute = BufferAttribute(colorsBuffer, glGetAttribLocation(shaderID, "color"), 3, GL_FLOAT, GL_FALSE, sizeof(vec3), (void *)0, 1);
+    vertexAttribute = VertexAttribute(glGetAttribLocation(shaderID, "vertex"), 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
 }
 
 void SpheresRenderer::draw()
 {
     glUseProgram(shaderID);
-    glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, triangleBuffer);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
+    glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
+    vertexAttribute.set();
+
     mat4 view = Camera::mainCamera.getViewMatrix();
     mat4 projection = Camera::mainCamera.getProjectionMatrix();
     mat4 vp = projection * view;
     glUniformMatrix4fv(vpMatrixID, 1, GL_FALSE, &vp[0][0]);
-    for (const BufferAttribute &va : bufferAttributes)
-    {
-        glEnableVertexAttribArray(va.index);
-        glBindBuffer(GL_ARRAY_BUFFER, va.bufferID);
-        glVertexAttribPointer(
-            va.index,
-            va.size,
-            va.type,
-            va.normalized,
-            va.stride,
-            va.pointer);
-    }
+
     glBindBuffer(GL_ARRAY_BUFFER, transformsBuffer);
     glBufferData(GL_ARRAY_BUFFER, transforms.size() * sizeof(Transform), &transforms[0], GL_DYNAMIC_DRAW);
-    glEnableVertexAttribArray(positionsAttribute.index);
-    glVertexAttribPointer(
-        positionsAttribute.index,
-        positionsAttribute.size,
-        positionsAttribute.type,
-        positionsAttribute.normalized,
-        positionsAttribute.stride,
-        positionsAttribute.pointer);
-    glVertexAttribDivisor(positionsAttribute.index, 1);
-    glEnableVertexAttribArray(rotationsAttribute.index);
-    glVertexAttribPointer(
-        rotationsAttribute.index,
-        rotationsAttribute.size,
-        rotationsAttribute.type,
-        rotationsAttribute.normalized,
-        rotationsAttribute.stride,
-        rotationsAttribute.pointer);
-    glVertexAttribDivisor(rotationsAttribute.index, 1);
-    glEnableVertexAttribArray(scalesAttribute.index);
-    glVertexAttribPointer(
-        scalesAttribute.index,
-        scalesAttribute.size,
-        scalesAttribute.type,
-        scalesAttribute.normalized,
-        scalesAttribute.stride,
-        scalesAttribute.pointer);
-    glVertexAttribDivisor(scalesAttribute.index, 1);
+
+    positionsAttribute.set();
+    rotationsAttribute.set();
+    scalesAttribute.set();
+
+    glBindBuffer(GL_ARRAY_BUFFER, colorsBuffer);
+    glBufferData(GL_ARRAY_BUFFER, colors.size() * sizeof(vec3), &colors[0], GL_DYNAMIC_DRAW);
+
+    colorsAttribute.set();
+
     glDrawElementsInstanced(GL_TRIANGLES, (GLsizei)triangleCount * 3, GL_UNSIGNED_INT, (void *)0, transforms.size());
 }
 
-RenderObject::RenderObject(GLuint shaderID, GLsizei vertexCount, std::vector<BufferAttribute> vertexAttributes, GLuint mvpMatrixID, vec3 position, vec3 rotation, vec3 scale)
+RenderObject::RenderObject(GLuint shaderID, GLsizei vertexCount, std::vector<BufferAttribute> vertexAttributes, vec3 position, vec3 rotation, vec3 scale)
 {
     transform = Transform(
         position,
@@ -137,7 +130,7 @@ RenderObject::RenderObject(GLuint shaderID, GLsizei vertexCount, std::vector<Buf
     this->shaderID = shaderID;
     this->vertexCount = vertexCount;
     this->bufferAttributes = vertexAttributes;
-    this->mvpMatrixID = mvpMatrixID;
+    this->mvpMatrixID = glGetUniformLocation(shaderID, "MVP");
 }
 void RenderObject::draw()
 {

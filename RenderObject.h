@@ -23,9 +23,23 @@ struct BufferAttribute
     GLboolean normalized;
     GLsizei stride;
     const GLvoid *pointer;
-    BufferAttribute(GLuint bufferID = 0, GLuint index = 0, GLint size = 0, GLenum type = 0, GLboolean normalized = false, GLsizei stride = 0, const GLvoid *pointer = (void *)0);
+    GLuint divisor;
+    BufferAttribute(GLuint bufferID = 0, GLuint index = 0, GLint size = 0, GLenum type = 0, GLboolean normalized = false, GLsizei stride = 0, const GLvoid *pointer = (void *)0, GLuint divisor = 0)
+        : bufferID(bufferID), index(index), size(size), type(type), normalized(normalized), stride(stride), pointer(pointer), divisor(divisor){};
+    void set() const;
 };
-
+struct VertexAttribute
+{
+    GLuint index;
+    GLint size;
+    GLenum type;
+    GLboolean normalized;
+    GLsizei stride;
+    const GLvoid *pointer;
+    VertexAttribute(GLuint index = 0, GLint size = 0, GLenum type = 0, GLboolean normalized = false, GLsizei stride = 0, const GLvoid *pointer = (void *)0)
+        : index(index), size(size), type(type), normalized(normalized), stride(stride), pointer(pointer){};
+    void set() const;
+};
 class Camera
 {
 public:
@@ -46,23 +60,25 @@ class SpheresRenderer
 {
 public:
     GLuint shaderID;
-    std::vector<GLuint> bufferIDs;
-    std::vector<BufferAttribute> bufferAttributes;
-    SpheresRenderer(GLuint shaderID, std::vector<GLuint> bufferIds, std::vector<BufferAttribute> bufferAttributes, std::vector<Transform> &transforms, int subdivisions);
+    SpheresRenderer(GLuint shaderID, std::vector<Transform> &transforms, std::vector<vec3> &colors, int subdivisions = 1);
     void draw();
 
-private:
+protected:
     GLuint vertexBuffer;
     GLuint triangleBuffer;
     GLuint transformsBuffer;
+    GLuint colorsBuffer;
     GLsizei triangleCount;
     GLsizei vertexCount;
     GLsizei transformCount;
     GLuint vpMatrixID;
     std::vector<Transform> &transforms;
+    std::vector<vec3> &colors;
     BufferAttribute positionsAttribute;
     BufferAttribute rotationsAttribute;
     BufferAttribute scalesAttribute;
+    BufferAttribute colorsAttribute;
+    VertexAttribute vertexAttribute;
 };
 
 class RenderObject
@@ -74,6 +90,6 @@ public:
     GLsizei vertexCount;
     std::vector<GLuint> bufferIDs;
     std::vector<BufferAttribute> bufferAttributes;
-    RenderObject(GLuint shaderID, GLsizei vertexCount, std::vector<BufferAttribute> vertexAttributes, GLuint mvpMatrixID, vec3 position = vec3(0), vec3 rotation = vec3(0), vec3 scale = vec3(1));
+    RenderObject(GLuint shaderID, GLsizei vertexCount, std::vector<BufferAttribute> vertexAttributes, vec3 position = vec3(0), vec3 rotation = vec3(0), vec3 scale = vec3(1));
     void draw();
 };
