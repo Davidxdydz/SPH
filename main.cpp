@@ -58,8 +58,6 @@ int main()
     GLuint simpleShaderID = LoadShaders("shaders/localPosition");
     GLuint instancingShaderID = LoadShaders("shaders/instancing");
 
-    GLuint MatrixID = glGetUniformLocation(simpleShaderID, "MVP");
-
     float dt = 0.0f;
     float t = 0.0f;
     // keep track of last frame time
@@ -67,42 +65,7 @@ int main()
     double fpsLastTime = glfwGetTime();
     int frameCount = 0;
 
-    int nx = 20;
-    int ny = 20;
-    int nz = 1;
-    int n = nx * ny * nz;
-    std::vector<Transform> transforms;
-    std::vector<vec3> colors;
-    std::vector<vec3> vs;
-    std::vector<float> densities = std::vector<float>(transforms.size(), 0);
-    float fixedDt = 0.05f;
-    float simulatedVolume = 1.0f;
-    float gravity = 0.001f;
-    float initialDensity = 200; // nx* ny* nz / simulatedVolume;
-    float volume = simulatedVolume / nx / ny / nz;
-    float h = 1.0f / pow(initialDensity, 1 / 2) / 8;
-    float displayRaius = 0.02f;
-    float effectiveRadius = pow(volume * 3 / 4 / 3.1415926f, 1.0f / 3);
-    float targetDensity = initialDensity;
-    float stiffness = 1.5f;
-
-    for (int x = 0; x < nx; x++)
-    {
-        for (int y = 0; y < ny; y++)
-        {
-            for (int z = 0; z < nz; z++)
-            {
-                float x0 = (float)x / nx;
-                float y0 = (float)y / ny;
-                float z0 = (float)z / nz;
-                transforms.push_back(Transform(vec3(x0, y0, z0) - vec3(0.5), vec3(0), vec3(displayRaius)));
-                vs.push_back(vec3(0));
-                colors.push_back(vec3(x0, y0, z0));
-            }
-        }
-    }
-
-    SpheresRenderer spheresRenderer(instancingShaderID, transforms, colors, 2);
+    Fluid fluid(instancingShaderID);
 
     glEnable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
@@ -114,16 +77,8 @@ int main()
         glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        sphStep(densities, transforms, vs, fixedDt, h, stiffness, targetDensity, gravity, 1, volume);
-        applyBoundaries(transforms, vs, 0.1, gravity);
-
-        for (int i = 0; i < densities.size(); i++)
-        {
-            float normalized = densities[i] / targetDensity;
-            colors[i] = vec3(normalized, 1 - normalized, 0);
-        }
-        std::cout << "density: " << densities[0] << std::endl;
-        spheresRenderer.draw();
+        fluid.step();
+        fluid.draw();
 
         // Swap buffers
         glfwSwapBuffers(window);

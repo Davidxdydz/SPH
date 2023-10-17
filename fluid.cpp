@@ -2,7 +2,111 @@
 #include <iostream>
 #include <glm/gtc/random.hpp>
 
-float W(float r, float h)
+Fluid::Fluid(GLuint instancingShaderID) : renderer(instancingShaderID, transforms, colors, 2)
+{
+    int nx = 20;
+    int ny = 20;
+    int nz = 1;
+    int n = nx * ny * nz;
+    this->dt = 0.05f;
+    this->simulatedVolume = 1.0f;
+    this->gravity = 0.001f;
+    this->restDensity = 200.0f;
+    this->volume = simulatedVolume / nx / ny / nz;
+    this->h = 1.0f / pow(restDensity, 1 / 2) / 8;
+    this->displayRaius = 0.02f;
+    this->effectiveRadius = pow(volume * 3 / 4 / 3.1415926f, 1.0f / 3);
+    this->targetDensity = restDensity;
+    this->stiffness = 1.5f;
+    this->damping = 0.1f;
+    this->m = 1.0f;
+
+    for (int x = 0; x < nx; x++)
+    {
+        for (int y = 0; y < ny; y++)
+        {
+            for (int z = 0; z < nz; z++)
+            {
+                float x0 = (float)x / nx;
+                float y0 = (float)y / ny;
+                float z0 = (float)z / nz;
+                transforms.push_back(Transform(vec3(x0, y0, z0) - vec3(0.5), vec3(0), vec3(displayRaius)));
+                vs.push_back(vec3(0));
+                colors.push_back(vec3(x0, y0, z0));
+            }
+        }
+    }
+}
+
+void Fluid::step()
+{
+    densities.assign(transforms.size(), 0);
+    pressures.assign(transforms.size(), 0);
+    as.assign(transforms.size(), vec3(0));
+
+    for (int i = 0; i < transforms.size(); i++)
+    {
+        for (int j = i; j < transforms.size(); j++)
+        {
+            vec3 delta = transforms[i].position - transforms[j].position;
+            float r = length(delta);
+            // rho[kg/m^3] = m[kg] * W[m^-3]
+            float d = m * W(r, h);
+            densities[i] += d;
+            densities[j] += d;
+        }
+    }
+    float gamma = 1.3f;
+
+    for (int i = 0; i < transforms.size(); i++)
+    {
+        // p [Nm^-2 = kgs^-2 m^-1] = k[m^2s^-2] * (rho[kg/m^3] - rho0[kg/m^3])
+        pressures[i] = stiffness * (densities[i] - restDensity);
+        // pressures[i] = stiffness * (pow(densities[i] / restDensity, 1.3) - 1);
+    }
+
+    for (int i = 0; i < transforms.size(); i++)
+    {
+        vec3 a = vec3(0);
+        for (int j = i + 1; j < transforms.size(); j++)
+        {
+            vec3 dist = transforms[i].position - transforms[j].position;
+            float r = length(dist);
+            vec3 direction = normalize(dist);
+            if (r < 1e-5)
+                direction = sphericalRand(1.0f);
+
+            // dP/dx[Nm^-3] = kgm^-1s^-2 * kg^-2m^6 * m^-4
+            // = kg^-1 s^-2 m
+            vec3 pressureGradient = (pressures[i] / densities[i] / densities[i] + pressures[j] / densities[j] / densities[j]) * dW(r, h) * direction;
+            as[i] -= pressureGradient;
+            as[j] += pressureGradient;
+        }
+        as[i] /= densities[i];
+        as[i].y -= gravity;
+        // as[i].x = 0;
+        // as[i].y = -gravity;
+        // as[i].z = 0;
+    }
+    // leapfrog integration
+    for (int i = 0; i < transforms.size(); i++)
+    {
+        vs[i].z = 0;
+        vs[i] += as[i] * dt;
+        transforms[i].position += vs[i] * dt;
+        transforms[i].position.z = -0.5f;
+    }
+    float total_energy = 0.0f;
+    for (int i = 0; i < transforms.size(); i++)
+    {
+        total_energy += 0.5f * m * dot(vs[i], vs[i]);
+        total_energy += m * gravity * (transforms[i].position.y + 1);
+    }
+    // std::cout << "total energy: " << total_energy << std::endl;
+    applyBoundaries();
+}
+
+float Fluid::W(float r, float h)
 {
     // https://de.wikipedia.org/wiki/Smoothed_Particle_Hydrodynamics#Kern
     // 0<=q <=1 : (4-6q^2 + 3q^3)
@@ -27,7 +131,7 @@ float W(float r, float h)
     return result * 1 / 6 / h3;
 }
 
-float dW(float r, float h)
+float Fluid::dW(float r, float h)
 {
     // 0<= q <=1 : -12q + 9q^2
     // h< q <=2 : -3(2-q)^2
@@ -51,119 +155,49 @@ float dW(float r, float h)
     return result * 1 / 6 / h4;
 }
 
-void sphStep(std::vector<float> &densities, std::vector<Transform> &spheres, std::vector<vec3> &vs, float dt, float h, float stiffness, float restDensity, float gravity, float m, float volume)
+void Fluid::applyBoundaries()
 {
-    densities.assign(spheres.size(), 0);
-    std::vector<float> pressures = std::vector<float>(spheres.size(), 0);
-    std::vector<vec3> as = std::vector<vec3>(spheres.size(), vec3(0));
-
-    for (int i = 0; i < spheres.size(); i++)
+    for (int i = 0; i < transforms.size(); i++)
     {
-        for (int j = i; j < spheres.size(); j++)
+        if (transforms[i].position.y < -1)
         {
-            vec3 delta = spheres[i].position - spheres[j].position;
-            float r = length(delta);
-            // rho[kg/m^3] = m[kg] * W[m^-3]
-            float d = m * W(r, h);
-            densities[i] += d;
-            densities[j] += d;
+            vs[i].y *= -(1 - damping);
+            transforms[i].position.y = -1;
+        }
+        if (transforms[i].position.y > 1)
+        {
+            vs[i].y *= -(1 - damping);
+            transforms[i].position.y = 1;
+        }
+        if (transforms[i].position.x < -1)
+        {
+            transforms[i].position.x = -1;
+            vs[i].x *= -(1 - damping);
+        }
+        if (transforms[i].position.x > 1)
+        {
+            transforms[i].position.x = 1;
+            vs[i].x *= -(1 - damping);
+        }
+        if (transforms[i].position.z < -1)
+        {
+            transforms[i].position.z = -1;
+            vs[i].z *= -(1 - damping);
+        }
+        if (transforms[i].position.z > 1)
+        {
+            transforms[i].position.z = 1;
+            vs[i].z *= -(1 - damping);
         }
     }
-    float gamma = 1.3f;
-
-    for (int i = 0; i < spheres.size(); i++)
-    {
-        // p [Nm^-2 = kgs^-2 m^-1] = k[m^2s^-2] * (rho[kg/m^3] - rho0[kg/m^3])
-        pressures[i] = stiffness * (densities[i] - restDensity);
-        // pressures[i] = stiffness * (pow(densities[i] / restDensity, 1.3) - 1);
-    }
-
-    for (int i = 0; i < spheres.size(); i++)
-    {
-        vec3 a = vec3(0);
-        for (int j = i + 1; j < spheres.size(); j++)
-        {
-            vec3 dist = spheres[i].position - spheres[j].position;
-            float r = length(dist);
-            vec3 direction = normalize(dist);
-            if (r < 1e-5)
-                direction = sphericalRand(1.0f);
-
-            // dP/dx[Nm^-3] = kgm^-1s^-2 * kg^-2m^6 * m^-4
-            // = kg^-1 s^-2 m
-            vec3 pressureGradient = (pressures[i] / densities[i] / densities[i] + pressures[j] / densities[j] / densities[j]) * dW(r, h) * direction;
-            as[i] -= pressureGradient;
-            as[j] += pressureGradient;
-        }
-        as[i] /= densities[i];
-        as[i].y -= gravity;
-        // as[i].x = 0;
-        // as[i].y = -gravity;
-        // as[i].z = 0;
-    }
-    // leapfrog integration
-    for (int i = 0; i < spheres.size(); i++)
-    {
-        vs[i].z = 0;
-        vs[i] += as[i] * dt;
-        spheres[i].position += vs[i] * dt;
-        spheres[i].position.z = -0.5f;
-    }
-    float total_energy = 0.0f;
-    for (int i = 0; i < spheres.size(); i++)
-    {
-        total_energy += 0.5f * m * dot(vs[i], vs[i]);
-        total_energy += m * gravity * (spheres[i].position.y + 1);
-    }
-    std::cout << "total energy: " << total_energy << std::endl;
 }
 
-void applyBoundaries(std::vector<Transform> &spheres, std::vector<vec3> &vs, float damping, float gravity)
+void Fluid::draw()
 {
-    for (int i = 0; i < spheres.size(); i++)
+    for (int i = 0; i < densities.size(); i++)
     {
-        if (spheres[i].position.y < -1)
-        {
-            float deltaH = -(spheres[i].position.y + 1);
-            float deltaE = deltaH * gravity * 1;
-            // std::cout << deltaE << std::endl;
-            float v = vs[i].y;
-            float v2 = v * v;
-            float dv = sqrt(v2 + 2 * deltaE / 1) - v2;
-            vs[i].y *= -(1 - damping);
-            // vs[i].y -= dv;
-            // std::cout << dv << std::endl;
-            spheres[i].position.y = -1;
-        }
-        if (spheres[i].position.y > 1)
-        {
-            float deltaE = (spheres[i].position.y - 1) * gravity;
-            float v = vs[i].y;
-            float v2 = v * v;
-            float dv = sqrt(v2 + 2 * deltaE / 1) - v2;
-            vs[i].y *= -(1 - damping);
-            // vs[i].y -= dv;
-            spheres[i].position.y = 1;
-        }
-        if (spheres[i].position.x < -1)
-        {
-            spheres[i].position.x = -1;
-            vs[i].x *= -(1 - damping);
-        }
-        if (spheres[i].position.x > 1)
-        {
-            spheres[i].position.x = 1;
-            vs[i].x *= -(1 - damping);
-        }
-        if (spheres[i].position.z < -1)
-        {
-            spheres[i].position.z = -1;
-            vs[i].z *= -(1 - damping);
-        }
-        if (spheres[i].position.z > 1)
-        {
-            spheres[i].position.z = 1;
-            vs[i].z *= -(1 - damping);
-        }
+        float normalized = densities[i] / targetDensity;
+        colors[i] = vec3(normalized, 1 - normalized, 0);
     }
+    renderer.draw();
 }

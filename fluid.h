@@ -2,5 +2,34 @@
 #include <vector>
 #include "RenderObject.h"
 
-void sphStep(std::vector<float> &densities, std::vector<Transform> &spheres, std::vector<vec3> &vs, float dt, float h, float stiffness = 1.5f, float restDensity = 1.0f, float gravity = 0.0f, float m = 1.0f, float volume = 1.0f);
-void applyBoundaries(std::vector<Transform> &spheres, std::vector<vec3> &vs, float damping = 0.01f, float gravitiy = 1.0f);
+class Fluid
+{
+public:
+    Fluid(GLuint instancingShaderID);
+    void step();
+    void draw();
+
+private:
+    float dt;
+    float simulatedVolume;
+    float gravity;
+    float restDensity;
+    float volume;
+    float h;
+    float displayRaius;
+    float effectiveRadius;
+    float targetDensity;
+    float stiffness;
+    float damping;
+    float m;
+    std::vector<Transform> transforms;
+    std::vector<vec3> colors;
+    std::vector<vec3> vs;
+    std::vector<float> densities;
+    std::vector<float> pressures;
+    std::vector<vec3> as;
+    SpheresRenderer renderer;
+    float W(float r, float h);
+    float dW(float r, float h);
+    void applyBoundaries();
+};
