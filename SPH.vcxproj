@@ -142,17 +142,17 @@
     <None Include="VertexShader.glsl" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="fluid.cpp" />
     <ClCompile Include="loadShader.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="RenderObject.cpp" />
     <ClCompile Include="shapes.cpp" />
-    <ClCompile Include="sph.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="fluid.h" />
     <ClInclude Include="loadShader.h" />
     <ClInclude Include="RenderObject.h" />
     <ClInclude Include="shapes.h" />
-    <ClInclude Include="sph.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />

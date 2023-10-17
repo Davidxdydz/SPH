@@ -12,7 +12,7 @@ using namespace glm;
 #include "RenderObject.h"
 #include "loadShader.h"
 #include "shapes.h"
-#include "sph.h"
+#include "fluid.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/random.hpp>

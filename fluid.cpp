@@ -1,4 +1,4 @@
-#include "sph.h"
+#include "fluid.h"
 #include <iostream>
 #include <glm/gtc/random.hpp>
 

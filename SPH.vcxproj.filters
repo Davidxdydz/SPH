@@ -31,7 +31,7 @@
     <ClCompile Include="shapes.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
-    <ClCompile Include="sph.cpp">
+    <ClCompile Include="fluid.cpp">
       <Filter>Quelldateien</Filter>
     </ClCompile>
   </ItemGroup>
@@ -45,7 +45,7 @@
     <ClInclude Include="shapes.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
-    <ClInclude Include="sph.h">
+    <ClInclude Include="fluid.h">
       <Filter>Headerdateien</Filter>
     </ClInclude>
   </ItemGroup>
