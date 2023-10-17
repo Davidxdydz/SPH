@@ -24,7 +24,7 @@ float W(float r, float h)
             result = (2 - q) * (2 - q) * (2 - q);
         }
     }
-    return result * 1 / 6 / h / h;
+    return result * 1 / 6 / h3;
 }
 
 float dW(float r, float h)
@@ -48,7 +48,7 @@ float dW(float r, float h)
             result = (-3) * (2 - q) * (2 - q);
         }
     }
-    return result * 1 / 6 / h4 * h;
+    return result * 1 / 6 / h4;
 }
 
 void sphStep(std::vector<float> &densities, std::vector<Transform> &spheres, std::vector<vec3> &vs, float dt, float h, float stiffness, float restDensity, float gravity, float m, float volume)
@@ -56,44 +56,46 @@ void sphStep(std::vector<float> &densities, std::vector<Transform> &spheres, std
     densities.assign(spheres.size(), 0);
     std::vector<float> pressures = std::vector<float>(spheres.size(), 0);
     std::vector<vec3> as = std::vector<vec3>(spheres.size(), vec3(0));
-    // compute densities
+
     for (int i = 0; i < spheres.size(); i++)
     {
         for (int j = i; j < spheres.size(); j++)
         {
-            vec3 r = spheres[i].position - spheres[j].position;
-            float rLength = length(r);
-            // if (rLength < 1e-5)
-            //     continue;
-            float d = m * W(rLength, h);
+            vec3 delta = spheres[i].position - spheres[j].position;
+            float r = length(delta);
+            // rho[kg/m^3] = m[kg] * W[m^-3]
+            float d = m * W(r, h);
             densities[i] += d;
             densities[j] += d;
         }
     }
     float gamma = 1.3f;
-    // compute pressures
+
     for (int i = 0; i < spheres.size(); i++)
     {
+        // p [Nm^-2 = kgs^-2 m^-1] = k[m^2s^-2] * (rho[kg/m^3] - rho0[kg/m^3])
         pressures[i] = stiffness * (densities[i] - restDensity);
         // pressures[i] = stiffness * (pow(densities[i] / restDensity, 1.3) - 1);
     }
-    // compute accelerations
-    int middleIndex = spheres.size() / 2;
+
     for (int i = 0; i < spheres.size(); i++)
     {
         vec3 a = vec3(0);
         for (int j = i + 1; j < spheres.size(); j++)
         {
-            vec3 r = spheres[i].position - spheres[j].position;
-            float rLength = length(r);
-            vec3 direction = normalize(r);
-            if (rLength < 1e-5)
+            vec3 dist = spheres[i].position - spheres[j].position;
+            float r = length(dist);
+            vec3 direction = normalize(dist);
+            if (r < 1e-5)
                 direction = sphericalRand(1.0f);
-            vec3 pressureGradient = (pressures[i] / densities[i] / densities[i] + pressures[j] / densities[j] / densities[j]) * dW(rLength, h) * direction;
+
+            // dP/dx[Nm^-3] = kgm^-1s^-2 * kg^-2m^6 * m^-4
+            // = kg^-1 s^-2 m
+            vec3 pressureGradient = (pressures[i] / densities[i] / densities[i] + pressures[j] / densities[j] / densities[j]) * dW(r, h) * direction;
             as[i] -= pressureGradient;
             as[j] += pressureGradient;
         }
-        // as[i] /= densities[i];
+        as[i] /= densities[i];
         as[i].y -= gravity;
         // as[i].x = 0;
         // as[i].y = -gravity;

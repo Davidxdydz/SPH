@@ -15,6 +15,7 @@ using namespace glm;
 #include "sph.h"
 
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/random.hpp>
 
 int main()
 {
@@ -74,16 +75,16 @@ int main()
     std::vector<vec3> colors;
     std::vector<vec3> vs;
     std::vector<float> densities = std::vector<float>(transforms.size(), 0);
-    float fixedDt = 0.005f;
+    float fixedDt = 0.05f;
     float simulatedVolume = 1.0f;
-    float gravity = 1.0f;
+    float gravity = 0.001f;
     float initialDensity = 200; // nx* ny* nz / simulatedVolume;
     float volume = simulatedVolume / nx / ny / nz;
-    float h = 1.0f / pow(initialDensity, 1 / 2) / 2;
+    float h = 1.0f / pow(initialDensity, 1 / 2) / 8;
     float displayRaius = 0.02f;
     float effectiveRadius = pow(volume * 3 / 4 / 3.1415926f, 1.0f / 3);
-    float targetDensity = initialDensity/3;
-    float stiffness = 15.0f;
+    float targetDensity = initialDensity;
+    float stiffness = 1.5f;
 
     for (int x = 0; x < nx; x++)
     {
@@ -121,6 +122,7 @@ int main()
             float normalized = densities[i] / targetDensity;
             colors[i] = vec3(normalized, 1 - normalized, 0);
         }
+        std::cout << "density: " << densities[0] << std::endl;
         spheresRenderer.draw();
 
         // Swap buffers
