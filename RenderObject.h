@@ -3,15 +3,14 @@
 #include <vector>
 
 #include <glm/glm.hpp>
-using namespace glm;
 
 struct Transform
 {
-    vec3 position;
-    vec3 rotation; // euler angles in degrees
-    vec3 scale;
-    Transform(vec3 position = vec3(0), vec3 rotation = vec3(0), vec3 scale = vec3(1)) : position(position), rotation(rotation), scale(scale){};
-    mat4 getMatrix();
+    glm::vec3 position;
+    glm::vec3 rotation; // euler angles in degrees
+    glm::vec3 scale;
+    Transform(glm::vec3 position = glm::vec3(0), glm::vec3 rotation = glm::vec3(0), glm::vec3 scale = glm::vec3(1)) : position(position), rotation(rotation), scale(scale){};
+    glm::mat4 getMatrix();
 };
 
 struct BufferAttribute
@@ -43,24 +42,24 @@ struct VertexAttribute
 class Camera
 {
 public:
-    vec3 position;
-    vec3 target;
+    glm::vec3 position;
+    glm::vec3 target;
     float near;
     float far;
     float fov;
     int width;
     int height;
     static Camera mainCamera;
-    Camera(vec3 position = vec3(0, 0, 5), vec3 target = vec3(0), float near = 0.01f, float far = 1000, int width = 1000, int height = 1000, float fov = 60);
-    mat4 getViewMatrix();
-    mat4 getProjectionMatrix();
+    Camera(glm::vec3 position = glm::vec3(0, 0, 5), glm::vec3 target = glm::vec3(0), float near = 0.01f, float far = 1000, int width = 1000, int height = 1000, float fov = 60);
+    glm::mat4 getViewMatrix();
+    glm::mat4 getProjectionMatrix();
 };
 
 class SpheresRenderer
 {
 public:
     GLuint shaderID;
-    SpheresRenderer(GLuint shaderID, std::vector<Transform> &transforms, std::vector<vec3> &colors, int subdivisions = 1);
+    SpheresRenderer(GLuint shaderID, std::vector<Transform> &transforms, std::vector<glm::vec3> &colors, int subdivisions = 1);
     void draw();
 
 protected:
@@ -73,7 +72,7 @@ protected:
     GLsizei transformCount;
     GLuint vpMatrixID;
     std::vector<Transform> &transforms;
-    std::vector<vec3> &colors;
+    std::vector<glm::vec3> &colors;
     BufferAttribute positionsAttribute;
     BufferAttribute rotationsAttribute;
     BufferAttribute scalesAttribute;
@@ -90,6 +89,6 @@ public:
     GLsizei vertexCount;
     std::vector<GLuint> bufferIDs;
     std::vector<BufferAttribute> bufferAttributes;
-    RenderObject(GLuint shaderID, GLsizei vertexCount, std::vector<BufferAttribute> vertexAttributes, vec3 position = vec3(0), vec3 rotation = vec3(0), vec3 scale = vec3(1));
+    RenderObject(GLuint shaderID, GLsizei vertexCount, std::vector<BufferAttribute> vertexAttributes, glm::vec3 position = glm::vec3(0), glm::vec3 rotation = glm::vec3(0), glm::vec3 scale = glm::vec3(1));
     void draw();
 };

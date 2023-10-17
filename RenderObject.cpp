@@ -6,6 +6,8 @@
 
 #include "shapes.h"
 
+using namespace glm;
+
 mat4 Transform::getMatrix()
 {
     mat4 model = translate(mat4(1.0f), position);
