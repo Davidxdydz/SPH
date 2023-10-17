@@ -15,7 +15,7 @@ Fluid::Fluid(GLuint instancingShaderID) : renderer(instancingShaderID, transform
     this->gravity = 0.001f;
     this->restDensity = 200.0f;
     this->volume = simulatedVolume / nx / ny / nz;
-    this->h = 1.0f / pow(restDensity, 1 / 2) / 8;
+    this->h = 1.0f / pow(restDensity, 1 / 2) / 16;
     this->displayRaius = 0.02f;
     this->effectiveRadius = pow(volume * 3 / 4 / 3.1415926f, 1.0f / 3);
     this->targetDensity = restDensity;
@@ -110,6 +110,7 @@ void Fluid::step()
 
 float Fluid::W(float r, float h)
 {
+    h *= 2; // to get the radius to be h
     // https://de.wikipedia.org/wiki/Smoothed_Particle_Hydrodynamics#Kern
     // 0<=q <=1 : (4-6q^2 + 3q^3)
     // 1<q <=2 : (2-q)^3
@@ -135,6 +136,7 @@ float Fluid::W(float r, float h)
 
 float Fluid::dW(float r, float h)
 {
+    h *= 2; // to get the radius to be h
     // 0<= q <=1 : -12q + 9q^2
     // h< q <=2 : -3(2-q)^2
     // q > 2 : 0
