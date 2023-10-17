@@ -53,14 +53,13 @@ int main()
     glGenVertexArrays(1, &VertexArrayID);
     glBindVertexArray(VertexArrayID);
 
-    float fpsAverageTime = 1.0f;
-
     GLuint simpleShaderID = LoadShaders("shaders/localPosition");
     GLuint instancingShaderID = LoadShaders("shaders/instancing");
 
     float dt = 0.0f;
     float t = 0.0f;
     // keep track of last frame time
+    float fpsAverageTime = 1.0f;
     double lastFrame = glfwGetTime();
     double fpsLastTime = glfwGetTime();
     int frameCount = 0;
@@ -71,11 +70,18 @@ int main()
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
 
-    float degreesPerSecond = 100;
+    float degreesPerSecond = 0;
+    float phase = 45.0f;
     do
     {
         glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        Camera::mainCamera.position = vec3(
+            4 * sin(radians(t * degreesPerSecond + phase)),
+			4,
+			4 * cos(radians(t * degreesPerSecond + phase))
+        );
 
         fluid.step();
         fluid.draw();

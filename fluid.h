@@ -5,38 +5,6 @@
 
 #include "RenderObject.h"
 
-class Fluid
-{
-public:
-    Fluid(GLuint instancingShaderID);
-    void step();
-    void draw();
-
-private:
-    float dt;
-    float simulatedVolume;
-    float gravity;
-    float restDensity;
-    float volume;
-    float h;
-    float displayRaius;
-    float effectiveRadius;
-    float targetDensity;
-    float stiffness;
-    float damping;
-    float m;
-    std::vector<Transform> transforms;
-    std::vector<glm::vec3> colors;
-    std::vector<glm::vec3> vs;
-    std::vector<float> densities;
-    std::vector<float> pressures;
-    std::vector<glm::vec3> as;
-    SpheresRenderer renderer;
-    float W(float r, float h);
-    float dW(float r, float h);
-    void applyBoundaries();
-};
-
 class Grid
 {
 public:
@@ -57,4 +25,35 @@ private:
     std::vector<int> startIndices;
     int hash(glm::vec3 pos);
     glm::ivec3 cellIds(glm::vec3 pos);
+};
+
+class Fluid
+{
+public:
+    Fluid(GLuint instancingShaderID);
+    void step();
+    void draw();
+
+private:
+    float dt;
+    float simulatedVolume;
+    float gravity;
+    float restDensity;
+    float h;
+    float displayRaius;
+    float stiffness;
+    float damping;
+    float m;
+    float mu;
+    std::vector<Transform> transforms;
+    std::vector<glm::vec3> colors;
+    std::vector<glm::vec3> vs;
+    std::vector<float> densities;
+    std::vector<float> pressures;
+    std::vector<glm::vec3> as;
+    SpheresRenderer renderer;
+    Grid grid;
+    float W(float r, float h);
+    float dW(float r, float h);
+    void applyBoundaries();
 };

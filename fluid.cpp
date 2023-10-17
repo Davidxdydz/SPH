@@ -4,24 +4,23 @@
 #include <glm/gtc/random.hpp>
 using namespace glm;
 
-Fluid::Fluid(GLuint instancingShaderID) : renderer(instancingShaderID, transforms, colors, 2)
+Fluid::Fluid(GLuint instancingShaderID) : renderer(instancingShaderID, transforms, colors, 2), grid(-1, 1000, transforms)
 {
-    int nx = 20;
-    int ny = 20;
-    int nz = 1;
+    int nx = 10;
+    int ny = 10;
+    int nz = 10;
     int n = nx * ny * nz;
-    this->dt = 0.05f;
+    this->dt = 0.02f;
     this->simulatedVolume = 1.0f;
-    this->gravity = 0.001f;
-    this->restDensity = 200.0f;
-    this->volume = simulatedVolume / nx / ny / nz;
-    this->h = 1.0f / pow(restDensity, 1 / 2) / 16;
-    this->displayRaius = 0.02f;
-    this->effectiveRadius = pow(volume * 3 / 4 / 3.1415926f, 1.0f / 3);
-    this->targetDensity = restDensity;
-    this->stiffness = 1.5f;
-    this->damping = 0.1f;
+    this->gravity = 0.05f;
+    this->restDensity = 600;
+    this->h = 1.0f / 20;
+    this->displayRaius = 0.05f;
+    this->stiffness = 5.5f;
+    this->damping = 0.3f;
     this->m = 1.0f;
+    this->grid.size = 2 * h;
+    this->mu = 0.0f;
 
     for (int x = 0; x < nx; x++)
     {
@@ -45,17 +44,23 @@ void Fluid::step()
     densities.assign(transforms.size(), 0);
     pressures.assign(transforms.size(), 0);
     as.assign(transforms.size(), vec3(0));
+    grid.update();
 
     for (int i = 0; i < transforms.size(); i++)
     {
-        for (int j = i; j < transforms.size(); j++)
+        std::vector<int> neighbors = grid.getCell(transforms[i].position);
+        for (int j = 0; j < neighbors.size(); j++)
         {
-            vec3 delta = transforms[i].position - transforms[j].position;
+            int neighborIndex = neighbors[j];
+            if (neighborIndex < i)
+                continue;
+            vec3 delta = transforms[i].position - transforms[neighborIndex].position;
             float r = length(delta);
             // rho[kg/m^3] = m[kg] * W[m^-3]
             float d = m * W(r, h);
             densities[i] += d;
-            densities[j] += d;
+            if (neighborIndex != i)
+                densities[neighborIndex] += d;
         }
     }
     float gamma = 1.3f;
@@ -69,10 +74,14 @@ void Fluid::step()
 
     for (int i = 0; i < transforms.size(); i++)
     {
-        vec3 a = vec3(0);
-        for (int j = i + 1; j < transforms.size(); j++)
+        std::vector<int> neighbors = grid.getNeighbors(transforms[i].position);
+        for (int j = 0; j < neighbors.size(); j++)
         {
-            vec3 dist = transforms[i].position - transforms[j].position;
+            int neighborIndex = neighbors[j];
+            if (neighborIndex <= i)
+                continue;
+
+            vec3 dist = transforms[i].position - transforms[neighborIndex].position;
             float r = length(dist);
             vec3 direction = normalize(dist);
             if (r < 1e-5)
@@ -80,23 +89,25 @@ void Fluid::step()
 
             // dP/dx[Nm^-3] = kgm^-1s^-2 * kg^-2m^6 * m^-4
             // = kg^-1 s^-2 m
-            vec3 pressureGradient = (pressures[i] / densities[i] / densities[i] + pressures[j] / densities[j] / densities[j]) * dW(r, h) * direction;
+            vec3 pressureGradient = (pressures[i] / densities[i] / densities[i] + pressures[neighborIndex] / densities[neighborIndex] / densities[neighborIndex]) * dW(r, h) * direction;
             as[i] -= pressureGradient;
-            as[j] += pressureGradient;
+            as[neighborIndex] += pressureGradient;
+            // viscosity
+            vec3 dv = 2 * mu * m / (densities[i] + densities[neighborIndex]) * (vs[neighborIndex] - vs[i]) * dW(r, h);
+            vs[i] += dv * dt;
+            vs[neighborIndex] -= dv * dt;
         }
         as[i] /= densities[i];
         as[i].y -= gravity;
-        // as[i].x = 0;
-        // as[i].y = -gravity;
-        // as[i].z = 0;
     }
+
     // leapfrog integration
     for (int i = 0; i < transforms.size(); i++)
     {
-        vs[i].z = 0;
+        // vs[i].z = 0;
         vs[i] += as[i] * dt;
         transforms[i].position += vs[i] * dt;
-        transforms[i].position.z = -0.5f;
+        // transforms[i].position.z = -0.5f;
     }
     float total_energy = 0.0f;
     for (int i = 0; i < transforms.size(); i++)
@@ -200,7 +211,8 @@ void Fluid::draw()
 {
     for (int i = 0; i < densities.size(); i++)
     {
-        float normalized = densities[i] / targetDensity;
+        // float normalized = densities[i] / restDensity /3;
+        float normalized = length(vs[i]) * 5;
         colors[i] = vec3(normalized, 1 - normalized, 0);
     }
     renderer.draw();
@@ -208,14 +220,14 @@ void Fluid::draw()
 
 Grid::Grid(float size, int tableSize, std::vector<Transform> &transforms) : size(size), transforms(transforms), tableSize(tableSize)
 {
-    hashs.assign(transforms.size(), 0);
-    sortedHashIndices.assign(transforms.size(), 0);
-    startIndices.assign(tableSize, -1);
-    update();
 }
 
 void Grid::update()
 {
+    // TODO move these to constructor and include their sizes in the constructor. atm not possible as transforms is unititialized in constructor
+    hashs.assign(transforms.size(), 0);
+    sortedHashIndices.assign(transforms.size(), 0);
+    startIndices.assign(tableSize, -1);
     for (int i = 0; i < transforms.size(); i++)
     {
         hashs[i] = hash(transforms[i].position);
@@ -228,8 +240,8 @@ void Grid::update()
     {
         if (hashs[sortedHashIndices[i]] != lastHash)
         {
-            startIndices[hashs[sortedHashIndices[i]]] = i;
             lastHash = hashs[sortedHashIndices[i]];
+            startIndices[lastHash] = i;
         }
     }
 }
@@ -263,6 +275,7 @@ std::vector<int> Grid::getCell(vec3 pos)
 
 std::vector<int> Grid::getNeighbors(vec3 pos)
 {
+    // probably incredibly slow to create a vector for every cell for every step
     std::vector<int> result;
     for (int x = -1; x < 2; x++)
     {
@@ -273,7 +286,7 @@ std::vector<int> Grid::getNeighbors(vec3 pos)
                 int cellHash = hash(pos + vec3(x, y, z) * size);
                 int start = startIndices[cellHash];
                 if (start == -1)
-                    return result;
+                    continue;
                 for (int i = start; i < sortedHashIndices.size(); i++)
                 {
                     if (hashs[sortedHashIndices[i]] != cellHash)
