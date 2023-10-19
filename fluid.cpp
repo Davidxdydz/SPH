@@ -4,7 +4,7 @@
 #include <glm/gtc/random.hpp>
 using namespace glm;
 
-Fluid::Fluid(GLuint instancingShaderID) : renderer(instancingShaderID, transforms, colors, 2), grid(-1, 1000, transforms)
+Fluid::Fluid(GLuint instancingShaderID) : renderer(instancingShaderID, transforms, colors, 1), grid(-1, 10000, transforms)
 {
     int nx = 10;
     int ny = 10;
@@ -12,11 +12,11 @@ Fluid::Fluid(GLuint instancingShaderID) : renderer(instancingShaderID, transform
     int n = nx * ny * nz;
     this->dt = 0.02f;
     this->simulatedVolume = 1.0f;
-    this->gravity = 0.05f;
-    this->restDensity = 600;
-    this->h = 1.0f / 20;
+    this->gravity = 0.02f;
+    this->restDensity = 900;
+    this->h = 1.0f / 40;
     this->displayRaius = 0.05f;
-    this->stiffness = 5.5f;
+    this->stiffness = 55;
     this->damping = 0.3f;
     this->m = 1.0f;
     this->grid.size = 2 * h;
@@ -31,7 +31,7 @@ Fluid::Fluid(GLuint instancingShaderID) : renderer(instancingShaderID, transform
                 float x0 = (float)x / nx;
                 float y0 = (float)y / ny;
                 float z0 = (float)z / nz;
-                transforms.push_back(Transform(vec3(x0, y0, z0) - vec3(0.5), vec3(0), vec3(displayRaius)));
+                transforms.push_back(Transform(vec3(x0, y0, z0) - vec3(0.5f), vec3(0), vec3(displayRaius)));
                 vs.push_back(vec3(0));
                 colors.push_back(vec3(x0, y0, z0));
             }
@@ -211,8 +211,8 @@ void Fluid::draw()
 {
     for (int i = 0; i < densities.size(); i++)
     {
-        // float normalized = densities[i] / restDensity /3;
-        float normalized = length(vs[i]) * 5;
+        float normalized = clamp(densities[i] / restDensity /3,0.0f,1.0f);
+        // float normalized = length(vs[i]) * 5;
         colors[i] = vec3(normalized, 1 - normalized, 0);
     }
     renderer.draw();
