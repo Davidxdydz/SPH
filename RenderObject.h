@@ -70,7 +70,9 @@ protected:
     GLsizei triangleCount;
     GLsizei vertexCount;
     GLsizei transformCount;
-    GLuint vpMatrixID;
+    GLuint vMatrixID;
+    GLuint pMatrixID;
+    GLuint lightPositionID;
     std::vector<Transform> &transforms;
     std::vector<glm::vec3> &colors;
     BufferAttribute positionsAttribute;

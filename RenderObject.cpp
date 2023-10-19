@@ -4,17 +4,21 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/euler_angles.hpp>
 
+#include <iostream>
+using namespace std;
+
 #include "shapes.h"
 
 using namespace glm;
 
 mat4 Transform::getMatrix()
 {
-    mat4 model = translate(mat4(1.0f), position);
+    mat4 model = mat4(1.0f);
+    model = glm::scale(model, scale);
     model = rotate(model, radians(rotation.x), vec3(1, 0, 0));
     model = rotate(model, radians(rotation.y), vec3(0, 1, 0));
     model = rotate(model, radians(rotation.z), vec3(0, 0, 1));
-    model = glm::scale(model, scale);
+    translate(model, position);
     return model;
 }
 
@@ -88,10 +92,12 @@ SpheresRenderer::SpheresRenderer(GLuint shaderID, std::vector<Transform> &transf
     glGenBuffers(1, &colorsBuffer);
     glBindBuffer(GL_ARRAY_BUFFER, colorsBuffer);
 
-    vpMatrixID = glGetUniformLocation(shaderID, "vp");
+    vMatrixID = glGetUniformLocation(shaderID, "view");
+    pMatrixID = glGetUniformLocation(shaderID, "projection");
+    lightPositionID = glGetUniformLocation(shaderID, "lightDir");
     positionsAttribute = BufferAttribute(transformsBuffer, glGetAttribLocation(shaderID, "position"), 3, GL_FLOAT, GL_FALSE, sizeof(Transform), (void *)0, 1);
-    rotationsAttribute = BufferAttribute(transformsBuffer, glGetAttribLocation(shaderID, "rotation"), 3, GL_FLOAT, GL_FALSE, sizeof(Transform), (void *)(3 * sizeof(float)), 1);
-    scalesAttribute = BufferAttribute(transformsBuffer, glGetAttribLocation(shaderID, "scale"), 3, GL_FLOAT, GL_FALSE, sizeof(Transform), (void *)(6 * sizeof(float)), 1);
+    rotationsAttribute = BufferAttribute(transformsBuffer, glGetAttribLocation(shaderID, "rotation"), 3, GL_FLOAT, GL_FALSE, sizeof(Transform), (void *)(sizeof(vec3)), 1);
+    scalesAttribute = BufferAttribute(transformsBuffer, glGetAttribLocation(shaderID, "scale"), 3, GL_FLOAT, GL_FALSE, sizeof(Transform), (void *)(2 * sizeof(vec3)), 1);
     colorsAttribute = BufferAttribute(colorsBuffer, glGetAttribLocation(shaderID, "color"), 3, GL_FLOAT, GL_FALSE, sizeof(vec3), (void *)0, 1);
     vertexAttribute = VertexAttribute(glGetAttribLocation(shaderID, "vertex"), 3, GL_FLOAT, GL_FALSE, 0, (void *)0);
 }
@@ -104,9 +110,13 @@ void SpheresRenderer::draw()
     vertexAttribute.set();
 
     mat4 view = Camera::mainCamera.getViewMatrix();
+    glUniformMatrix4fv(vMatrixID, 1, GL_FALSE, &view[0][0]);
     mat4 projection = Camera::mainCamera.getProjectionMatrix();
-    mat4 vp = projection * view;
-    glUniformMatrix4fv(vpMatrixID, 1, GL_FALSE, &vp[0][0]);
+    glUniformMatrix4fv(pMatrixID, 1, GL_FALSE, &projection[0][0]);
+
+    vec3 lightDir(1, 0, 0);
+
+    glUniform3fv(lightPositionID, 1, &lightDir[0]);
 
     glBindBuffer(GL_ARRAY_BUFFER, transformsBuffer);
     glBufferData(GL_ARRAY_BUFFER, transforms.size() * sizeof(Transform), &transforms[0], GL_DYNAMIC_DRAW);

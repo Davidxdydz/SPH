@@ -1,12 +1,11 @@
-#version 460 core
+#version 460
 out vec3 color;
 in vec3 baseColor;
-in vec3 p;
-in vec3 r;
-in vec3 s;
+in vec3 normal;
+in vec3 lightDirection;
 
 void main(){
-     color=baseColor;
-     // color = s;
-     // color = vec3(1) * dot(localPos,vec3(1.0, 1.0, 0.0));
+     color=clamp(dot(lightDirection,normal),0,1)*baseColor;
+     // color = baseColor;
+     // color = normal * 0.5 + 0.5;
 }
