@@ -17,6 +17,8 @@ using namespace glm;
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/random.hpp>
 
+using namespace std;
+
 int main()
 {
     if (!glfwInit())
@@ -47,8 +49,6 @@ int main()
     // disable vsync
     glfwSwapInterval(0);
 
-    glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
-
     GLuint VertexArrayID;
     glGenVertexArrays(1, &VertexArrayID);
     glBindVertexArray(VertexArrayID);
@@ -67,21 +67,49 @@ int main()
     Fluid fluid(instancingShaderID);
 
     glEnable(GL_CULL_FACE);
+    glCullFace(GL_FRONT);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_LESS);
 
-    float degreesPerSecond = 0;
-    float phase = 45.0f;
+    float phi = 0;
+    float theta = 0;
+    float r = 5;
+    float rSpeed = 1;
+    float phiSpeed = 100;
+    float thetaSpeed = 100;
+    float rotateSpeed = 100;
+    Camera::mainCamera.position = vec3(0, 0, 5);
+    Camera::mainCamera.target = vec3(0, 0, 0);
+    dvec2 cursorPos;
+    dvec2 prevCursorPos;
+    dvec2 deltaCursor;
     do
     {
+        deltaCursor = cursorPos - prevCursorPos;
+        prevCursorPos = cursorPos;
+        glfwGetCursorPos(window, &cursorPos[0], &cursorPos[1]);
+
         glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+        if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
+        {
+            phi -= deltaCursor.x * phiSpeed * dt;
+            theta += deltaCursor.y * thetaSpeed * dt;
+        }
+        if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS)
+        {
+            r = 5;
+            phi = 0;
+            theta = 0;
+        }
+        phi = fmod(phi, 360);
+        theta = clamp(theta, -80.0f, 80.0f);
+
         Camera::mainCamera.position = vec3(
-            4 * sin(radians(t * degreesPerSecond + phase)),
-			4,
-			4 * cos(radians(t * degreesPerSecond + phase))
-        );
+            r * cos(radians(theta)) * sin(radians(phi)),
+            r * sin(radians(theta)),
+            r * cos(radians(theta)) * cos(radians(phi)));
 
         fluid.step();
         fluid.draw();
@@ -96,7 +124,7 @@ int main()
         frameCount++;
         if (currentFrame - fpsLastTime > fpsAverageTime)
         {
-            std::cout << frameCount / (currentFrame - fpsLastTime) << "fps\n";
+            cout << frameCount / (currentFrame - fpsLastTime) << "fps" << endl;
             fpsLastTime = currentFrame;
             frameCount = 0;
         }
