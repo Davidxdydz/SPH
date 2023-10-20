@@ -17,6 +17,10 @@ using namespace glm;
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/random.hpp>
 
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+
 using namespace std;
 
 int main()
@@ -53,6 +57,16 @@ int main()
     glGenVertexArrays(1, &VertexArrayID);
     glBindVertexArray(VertexArrayID);
 
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO &io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;  // Enable Gamepad Controls
+    // Setup Platform/Renderer backends
+    ImGui_ImplGlfw_InitForOpenGL(window, true); // Second param install_callback=true will install GLFW callbacks and chain to existing ones.
+    ImGui_ImplOpenGL3_Init();
+
     GLuint simpleShaderID = LoadShaders("shaders/localPosition");
     GLuint instancingShaderID = LoadShaders("shaders/instancing");
 
@@ -83,8 +97,20 @@ int main()
     dvec2 cursorPos;
     dvec2 prevCursorPos;
     dvec2 deltaCursor;
+
     do
     {
+
+        // (Your code calls glfwPollEvents())
+        // ...
+        // Start the Dear ImGui frame
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+        ImGui::Begin("Test");
+        ImGui::SliderFloat("float", &rotateSpeed, -80, 80);
+        ImGui::End();
+
         deltaCursor = cursorPos - prevCursorPos;
         prevCursorPos = cursorPos;
         glfwGetCursorPos(window, &cursorPos[0], &cursorPos[1]);
@@ -113,6 +139,12 @@ int main()
 
         fluid.step();
         fluid.draw();
+
+        // Rendering
+        // (Your code clears your framebuffer, renders your other stuff etc.)
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        // (Your code calls glfwSwapBuffers() etc.)
 
         // Swap buffers
         glfwSwapBuffers(window);

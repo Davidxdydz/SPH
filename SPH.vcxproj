@@ -125,7 +125,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(SolutionDir)\packages\glm;$(SolutionDir)\packages\glfw-3.3.8.bin.WIN64\include;$(SolutionDir)\packages\glew-2.1.0\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)\packages\imgui\backends;$(SolutionDir)\packages\glm;$(SolutionDir)\packages\glfw-3.3.8.bin.WIN64\include;$(SolutionDir)\packages\glew-2.1.0\include;$(SolutionDir)\packages\imgui;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
     </ClCompile>
     <Link>
@@ -145,12 +145,21 @@
     <ClCompile Include="fluid.cpp" />
     <ClCompile Include="loadShader.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="packages\imgui\backends\imgui_impl_glfw.cpp" />
+    <ClCompile Include="packages\imgui\backends\imgui_impl_opengl3.cpp" />
+    <ClCompile Include="packages\imgui\imgui.cpp" />
+    <ClCompile Include="packages\imgui\imgui_demo.cpp" />
+    <ClCompile Include="packages\imgui\imgui_draw.cpp" />
+    <ClCompile Include="packages\imgui\imgui_tables.cpp" />
+    <ClCompile Include="packages\imgui\imgui_widgets.cpp" />
     <ClCompile Include="RenderObject.cpp" />
     <ClCompile Include="shapes.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="fluid.h" />
     <ClInclude Include="loadShader.h" />
+    <ClInclude Include="packages\imgui\backends\imgui_impl_glfw.h" />
+    <ClInclude Include="packages\imgui\backends\imgui_impl_opengl3.h" />
     <ClInclude Include="RenderObject.h" />
     <ClInclude Include="shapes.h" />
   </ItemGroup>
